@@ -1,0 +1,9 @@
+\select@language {spanish}
+\contentsline {section}{\numberline {1}Introducci\IeC {\'o}n}{3}
+\contentsline {section}{\numberline {2}Algoritmos MPPT}{4}
+\contentsline {subsection}{\numberline {2.1}Concepto de MPPT}{4}
+\contentsline {subsection}{\numberline {2.2}Hill-Climbing MPPT}{5}
+\contentsline {section}{\numberline {3}Esquema del Circuito}{8}
+\contentsline {subsection}{\numberline {3.1}Convertidor Flyback y algoritmo MPPT}{8}
+\contentsline {subsection}{\numberline {3.2}Inversor}{10}
+\contentsline {subsection}{\numberline {3.3}Inversor conectado a red}{12}
