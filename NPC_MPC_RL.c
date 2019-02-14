@@ -24,7 +24,7 @@ FILE *MYFILEPR;                         /*Declare file pointer to a file */
 
 /*Variables globales*/
 
-
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 float iabc[3],i_aB[2],iref[3],iref_aB[2],iJ_aB[2],ie[2];
 float vabc[3],v_aB[2];
 float pref;
