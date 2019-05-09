@@ -253,17 +253,17 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
 	// iref[1] = Tabc_aB[0][1]*iref_aB[0]+Tabc_aB[1][1]*iref_aB[1];
 	// iref[2] = Tabc_aB[0][2]*iref_aB[0]+Tabc_aB[1][2]*iref_aB[1];
 	
-	fprintf(MYFILEPR,"ia: %f \n", iabc[0]);
+	fprintf(MYFILEPR,"iaref: %f \n", iref[0]);
+	fprintf(MYFILEPR,"ibref: %f \n", iref[1]);
+	fprintf(MYFILEPR,"icref: %f \n", iref[2]);
+    fprintf(MYFILEPR,"ia: %f \n", iabc[0]);
 	fprintf(MYFILEPR,"ib: %f \n", iabc[1]);
 	fprintf(MYFILEPR,"ic: %f \n", iabc[2]);
-	fprintf(MYFILEPR,"va: %f \n", vabc[0]);
-	fprintf(MYFILEPR,"vb: %f \n", vabc[1]);
-	fprintf(MYFILEPR,"vc: %f \n", vabc[2]);
+	
     fprintf(MYFILEPR," \n");
     fprintf(MYFILEPR,"ialfa: %f \n", i_aB[0]);
 	fprintf(MYFILEPR,"ibeta: %f \n", i_aB[1]);
-	fprintf(MYFILEPR,"valfa: %f \n", v_aB[0]);
-	fprintf(MYFILEPR,"vbeta: %f \n", v_aB[1]);
+
     fprintf(MYFILEPR," \n");
     fprintf(MYFILEPR,"irefa: %f \n", iref_aB[0]);
 	fprintf(MYFILEPR,"irefb: %f \n", iref_aB[1]);
@@ -337,15 +337,16 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     
 //     fprintf(MYFILEPR,"estado actual: %f %f %f \n", uabc[0],uabc[1],uabc[2]);
     
-//     for(i=1;i<27;i++)
-//     {
-//         if(Uk[i-1][3] == true)
-//         {
-//                 fprintf(MYFILEPR,"posible: %f %f %f \n", Uk[i-1][0],Uk[i-1][1],Uk[i-1][2]);
-//         }
-//     }
+    // for(i=1;i<=27;i++)
+    // {
+    //     fprintf(MYFILEPR,"%d",i);
+    //     // if(Uk[i-1][3] == true)
+    //     // {
+    //     //         fprintf(MYFILEPR,"posible: %f %f %f \n", Uk[i-1][0],Uk[i-1][1],Uk[i-1][2]);
+    //     // }
+    // }
     
-    for(i=1;i<27;i++)
+    for(i=1;i<=27;i++)
     {
         if(Uk[i-1][3] == true)
         {
@@ -368,7 +369,10 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
                 a = Uk[i-1][0];
                 b = Uk[i-1][1];
                 c = Uk[i-1][2];
-//                 fprintf(MYFILEPR,"cost: %f \n", Jmin);
+                 fprintf(MYFILEPR,"cost: %f \n", Jmin);
+                 fprintf(MYFILEPR,"a: %d \n", a);
+                 fprintf(MYFILEPR,"b: %d \n", b);
+                 fprintf(MYFILEPR,"c: %d \n", c); 
             }
         }
     }
@@ -390,9 +394,7 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
    if(cont == 10000)
         cont = 0;
 
-    fprintf(MYFILEPR,"a: %f \n", a);
-    fprintf(MYFILEPR,"b: %f \n", b);
-    fprintf(MYFILEPR,"c: %f \n", c);     
+        
 //    if(uabc[0] == 1){S11[0]=1;S12[0]=1;}
 //    if(uabc[0] == 0){S11[0]=0;S12[0]=1;}
 //    if(uabc[0] == -1){S11[0]=0;S12[0]=0;}
@@ -468,7 +470,12 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
           S32[0]=100;
    } 
    
- 
+ fprintf(MYFILEPR,"S11: %f \n", S11[0]);
+ fprintf(MYFILEPR,"S12: %f \n", S12[0]);
+ fprintf(MYFILEPR,"S21: %f \n", S21[0]);
+ fprintf(MYFILEPR,"S31: %f \n", S22[0]);
+ fprintf(MYFILEPR,"S32: %f \n", S31[0]);  
+ fprintf(MYFILEPR,"S22: %f \n", S32[0]);
     
 }
 

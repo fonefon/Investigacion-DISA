@@ -20,15 +20,15 @@ FILE *MYFILEPR;                         /*Declare file pointer to a file */
 /*Variables globales*/
 
 
-float iabc[3],i_aB[2],iref[3],iref_aB[2],iJ_aB[2],ie[2];
+float iabc[3],i_aB[2],iref[3],iref_aB[2],iref2[3],iref2_aB[2],iJ_aB[2],iJ2_aB[2],ie[2];
 float vabc[3],v_aB[2];
 float pref;
 float Vph_rms;
 float ampli;
 float vdc,R,L;
 float Tsampling = 100e-6;
-float uabc[3],incr_u;
-float SECUENCIA[27*27];
+float u_0[3],incr_u,u_act[3];
+float SECUENCIA[27*27][7],Uk2[27][4];
 int a,b,c;
 float lambda,delta,J;
 // float seno[10000];
@@ -37,7 +37,12 @@ float lambda,delta,J;
 
 float Tabc_aB[2][3];
 
-int i,cont;
+int i,cont,j;
+float seq[27][4]={{-1.,-1.,-1.,true},{-1.,-1.,0.,true},{-1.,-1.,1.,true},{-1.,0.,-1.,true},{-1.,0.,0.,true},{-1.,0.,1.,true},
+                     {-1.,1.,-1.,true},{-1.,1.,0.,true},{-1.,1.,1.,true},{0.,-1.,-1.,true},{0.,-1.,0.,true},{0.,-1.,1.,true},
+                     {0.,0.,-1.,true},{0.,0.,0.,true},{0.,0.,1.,true},{0.,1.,-1.,true},{0.,1.,0.,true},{0.,1.,1.,true},
+                     {1.,-1.,-1.,true},{1.,-1.,0.,true},{1.,-1.,1.,true},{1.,0.,-1.,true},{1.,0.,0.,true},{1.,0.,1.,true},
+                     {1.,1.,-1.,true},{1.,1.,0.,true},{1.,1.,1.,true}};
 
 
 
@@ -138,9 +143,9 @@ static void mdlStart(SimStruct *S)
 	pref = (Vph_rms*Vph_rms)/R;
     ampli = Vph_rms/sqrt(R*R + (2.*M_PI*50.*L)*(2.*M_PI*50.*L));
     
-    uabc[0]=0.;
-    uabc[1]=0.;
-    uabc[2]=0.;
+    u_0[0]=0.;
+    u_0[1]=0.;
+    u_0[2]=0.;
 
     a = 1.;
     b = 0.;
@@ -152,6 +157,15 @@ static void mdlStart(SimStruct *S)
 	
 	// A = 1-R*Tsampling/L;
 	// B = Tsampling*vdc/L/2.;
+
+    for(i=1;i<=27;i++)
+    {
+        for(j=1;j<=4;j++)
+        {
+            Uk2[i][j] = seq[i][j];
+        }
+    }
+    
     
 
 }
@@ -163,64 +177,66 @@ static void mdlStart(SimStruct *S)
  *    
  */
 
-static float Useq(float u[3])
+static void Useq(float uabc[3])
 {
+    int i;
+
     if(uabc[0]==-1)
     {
         for(i=19;i<=27;i++)
         {
-            Uk[i-1][3]=false;
+            Uk2[i-1][3]=false;
         }
     }
     if(uabc[0]==1)
     {
         for(i=1;i<=9;i++)
         {
-            Uk[i-1][3]=false;
+            Uk2[i-1][3]=false;
         }
     }
     if(uabc[1]==-1)
     {
         for(i=7;i<=9;i++)
         {
-            Uk[i-1][3]=false;
+            Uk2[i-1][3]=false;
         }
         for(i=16;i<=18;i++)
         {
-            Uk[i-1][3]=false;
+            Uk2[i-1][3]=false;
         }
         for(i=25;i<=27;i++)
         {
-            Uk[i-1][3]=false;
+            Uk2[i-1][3]=false;
         }  
     }
     if(uabc[1]==1)
     {
         for(i=1;i<=3;i++)
         {
-            Uk[i-1][3]=false;
+            Uk2[i-1][3]=false;
         }
         for(i=10;i<=12;i++)
         {
-            Uk[i-1][3]=false;
+            Uk2[i-1][3]=false;
         }
         for(i=19;i<=21;i++)
         {
-            Uk[i-1][3]=false;
+            Uk2[i-1][3]=false;
         }  
     }
     if(uabc[2]==-1)
     {
         for(i=3;i<=27;i=i+3)
         {
-            Uk[i-1][3]=false;
+            Uk2[i-1][3]=false;
         }
     }
     if(uabc[2]==1)
     {
         for(i=1;i<=27;i=i+3)
         {
-            Uk[i-1][3]=false;
+            Uk2[i-1][3]=false;
         }
     }
 }
@@ -264,7 +280,9 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     // Vector de transiciones
     
     
-    
+    // CONSTRUCCIÓN MATRIZ TOTAL DE SECUENCIAS
+
+
    
     float Uk[27][4]={{-1.,-1.,-1.,true},{-1.,-1.,0.,true},{-1.,-1.,1.,true},{-1.,0.,-1.,true},{-1.,0.,0.,true},{-1.,0.,1.,true},
                      {-1.,1.,-1.,true},{-1.,1.,0.,true},{-1.,1.,1.,true},{0.,-1.,-1.,true},{0.,-1.,0.,true},{0.,-1.,1.,true},
@@ -298,8 +316,15 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     iref[1] = ampli*sin(50. * (2. * M_PI) * cont / 10000. + 2.*M_PI/3.);
     iref[2] = ampli*sin(50. * (2. * M_PI) * cont / 10000. + 4.*M_PI/3.);
 
+    iref2[0] = ampli*sin(50. * (2. * M_PI) * (cont + 1.) / 10000.);
+    iref2[1] = ampli*sin(50. * (2. * M_PI) * (cont + 1.) / 10000. + 2.*M_PI/3.);
+    iref2[2] = ampli*sin(50. * (2. * M_PI) * (cont + 1.) / 10000. + 4.*M_PI/3.);
+
     iref_aB[0] = Tabc_aB[0][0]*iref[0]+Tabc_aB[0][1]*iref[1]+Tabc_aB[0][2]*iref[2];
     iref_aB[1] = Tabc_aB[1][0]*iref[0]+Tabc_aB[1][1]*iref[1]+Tabc_aB[1][2]*iref[2];
+
+    iref2_aB[0] = Tabc_aB[0][0]*iref2[0]+Tabc_aB[0][1]*iref2[1]+Tabc_aB[0][2]*iref2[2];
+    iref2_aB[1] = Tabc_aB[1][0]*iref2[0]+Tabc_aB[1][1]*iref2[1]+Tabc_aB[1][2]*iref2[2];
 	
 	// delta = (v_aB[0]*v_aB[0]+v_aB[1]*v_aB[1]);
     // if(delta == 0)
@@ -334,6 +359,64 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     
     // Conjunto de transiciones posibles
     
+    if(u_0[0]==-1)
+    {
+        for(i=19;i<=27;i++)
+        {
+            Uk[i-1][3]=false;
+        }
+    }
+    if(u_0[0]==1)
+    {
+        for(i=1;i<=9;i++)
+        {
+            Uk[i-1][3]=false;
+        }
+    }
+    if(u_0[1]==-1)
+    {
+        for(i=7;i<=9;i++)
+        {
+            Uk[i-1][3]=false;
+        }
+        for(i=16;i<=18;i++)
+        {
+            Uk[i-1][3]=false;
+        }
+        for(i=25;i<=27;i++)
+        {
+            Uk[i-1][3]=false;
+        }  
+    }
+    if(u_0[1]==1)
+    {
+        for(i=1;i<=3;i++)
+        {
+            Uk[i-1][3]=false;
+        }
+        for(i=10;i<=12;i++)
+        {
+            Uk[i-1][3]=false;
+        }
+        for(i=19;i<=21;i++)
+        {
+            Uk[i-1][3]=false;
+        }  
+    }
+    if(u_0[2]==-1)
+    {
+        for(i=3;i<=27;i=i+3)
+        {
+            Uk[i-1][3]=false;
+        }
+    }
+    if(u_0[2]==1)
+    {
+        for(i=1;i<=27;i=i+3)
+        {
+            Uk[i-1][3]=false;
+        }
+    }
     
     
     // Calculo funcion de coste
@@ -353,36 +436,56 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     {
         if(Uk[i-1][3] == true)
         {
+            u_act[0] = Uk[i-1][0];
+            u_act[1] = Uk[i-1][1];
+            u_act[2] = Uk[i-1][2];
 
             iJ_aB[0] = (1./(R*Tsampling+L))*(L*i_aB[0]+Tsampling*vdc/3.*sqrt(3./2.)*(Tabc_aB[0][0]*Uk[i-1][0]+Tabc_aB[0][1]*Uk[i-1][1]+Tabc_aB[0][2]*Uk[i-1][2]));
             iJ_aB[1] = (1./(R*Tsampling+L))*(L*i_aB[1]+Tsampling*vdc/3.*sqrt(3./2.)*(Tabc_aB[1][0]*Uk[i-1][0]+Tabc_aB[1][1]*Uk[i-1][1]+Tabc_aB[1][2]*Uk[i-1][2]));
 			
-            ie[0] = iref_aB[0]-iJ_aB[0];
-            ie[1] = iref_aB[1]-iJ_aB[1];
-
-            incr_u=fabsf(Uk[i-1][0]-uabc[0])+
-                   fabsf(Uk[i-1][1]-uabc[1])+
-                   fabsf(Uk[i-1][2]-uabc[2]);
-
-            J=ie[0]*ie[0]+ie[1]*ie[1]+lambda*incr_u;
-
-            if(J<Jmin)
+            for(j=1;j<=27;j++) // SEGUNDO HORIZONTE Y MINIMIZACION
             {
-                Jmin = J;
-                a = Uk[i-1][0];
-                b = Uk[i-1][1];
-                c = Uk[i-1][2];
-                 fprintf(MYFILEPR,"cost: %f \n", Jmin);
-                 fprintf(MYFILEPR,"a: %d \n", a);
-                 fprintf(MYFILEPR,"b: %d \n", b);
-                 fprintf(MYFILEPR,"c: %d \n", c); 
+                Useq(u_act);
+
+                iJ2_aB[0] = (1./(R*Tsampling+L))*(L*iJ_aB[0]+Tsampling*vdc/3.*sqrt(3./2.)*(Tabc_aB[0][0]*Uk2[j-1][0]+Tabc_aB[0][1]*Uk2[j-1][1]+Tabc_aB[0][2]*Uk2[j-1][2]));
+                iJ2_aB[1] = (1./(R*Tsampling+L))*(L*iJ_aB[1]+Tsampling*vdc/3.*sqrt(3./2.)*(Tabc_aB[1][0]*Uk2[j-1][0]+Tabc_aB[1][1]*Uk2[j-1][1]+Tabc_aB[1][2]*Uk2[j-1][2]));
+
+                ie[0] = iref_aB[0]-iJ_aB[0] + iref2_aB[0]-iJ2_aB[0];
+                ie[1] = iref_aB[1]-iJ_aB[1] + iref2_aB[0]-iJ2_aB[0];
+
+                incr_u=fabsf(Uk[i-1][0]-u_0[0])+
+                       fabsf(Uk[i-1][1]-u_0[1])+
+                       fabsf(Uk[i-1][2]-u_0[2])+
+                       fabsf(Uk2[j-1][0]-Uk[i-1][0])+
+                       fabsf(Uk2[j-1][1]-Uk[i-1][1])+
+                       fabsf(Uk2[j-1][2]-Uk[i-1][2]);
+
+                J=ie[0]*ie[0]+ie[1]*ie[1]+lambda*incr_u;
+
+                if(J<Jmin)
+                {
+                    Jmin = J;
+                    a = Uk[i-1][0];
+                    b = Uk[i-1][1];
+                    c = Uk[i-1][2];
+                    fprintf(MYFILEPR,"cost: %f \n", Jmin);
+                    fprintf(MYFILEPR,"a: %d \n", a);
+                    fprintf(MYFILEPR,"b: %d \n", b);
+                    fprintf(MYFILEPR,"c: %d \n", c); 
+                }
             }
+
+            
+
+            
+
+            
         }
     }
     
-   uabc[0]   = a;
-   uabc[1]   = b;
-   uabc[2]   = c; 
+   u_0[0]   = a;
+   u_0[1]   = b;
+   u_0[2]   = c; 
    // TORQUE=Xm/0.78/Xr*(flux_r*is_dq[1]);
    // TORQUE=Xm/0.78/Xr*(histphir_a[0]*is_aB[1]-histphir_B[0]*is_aB[0]);
    
