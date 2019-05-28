@@ -56,7 +56,7 @@ int i,cont;
  */
 static void mdlInitializeSizes(SimStruct *S)
 {
-    MYFILEPR=fopen("my_data_file2","w");  /* Opens a file, whose name is my_data_file, for writing */ 
+    MYFILEPR=fopen("N1","w");  /* Opens a file, whose name is my_data_file, for writing */ 
     
     ssSetNumSFcnParams(S, 0);
     if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) {
@@ -253,21 +253,21 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
 	// iref[1] = Tabc_aB[0][1]*iref_aB[0]+Tabc_aB[1][1]*iref_aB[1];
 	// iref[2] = Tabc_aB[0][2]*iref_aB[0]+Tabc_aB[1][2]*iref_aB[1];
 	
-	fprintf(MYFILEPR,"iaref: %f \n", iref[0]);
-	fprintf(MYFILEPR,"ibref: %f \n", iref[1]);
-	fprintf(MYFILEPR,"icref: %f \n", iref[2]);
-    fprintf(MYFILEPR,"ia: %f \n", iabc[0]);
-	fprintf(MYFILEPR,"ib: %f \n", iabc[1]);
-	fprintf(MYFILEPR,"ic: %f \n", iabc[2]);
+	// fprintf(MYFILEPR,"iaref: %f \n", iref[0]);
+	// fprintf(MYFILEPR,"ibref: %f \n", iref[1]);
+	// fprintf(MYFILEPR,"icref: %f \n", iref[2]);
+    // fprintf(MYFILEPR,"ia: %f \n", iabc[0]);
+	// fprintf(MYFILEPR,"ib: %f \n", iabc[1]);
+	// fprintf(MYFILEPR,"ic: %f \n", iabc[2]);
 	
-    fprintf(MYFILEPR," \n");
-    fprintf(MYFILEPR,"ialfa: %f \n", i_aB[0]);
-	fprintf(MYFILEPR,"ibeta: %f \n", i_aB[1]);
+    // fprintf(MYFILEPR," \n");
+    // fprintf(MYFILEPR,"ialfa: %f \n", i_aB[0]);
+	// fprintf(MYFILEPR,"ibeta: %f \n", i_aB[1]);
 
-    fprintf(MYFILEPR," \n");
-    fprintf(MYFILEPR,"irefa: %f \n", iref_aB[0]);
-	fprintf(MYFILEPR,"irefb: %f \n", iref_aB[1]);
-    fprintf(MYFILEPR," \n");
+    // fprintf(MYFILEPR," \n");
+    // fprintf(MYFILEPR,"irefa: %f \n", iref_aB[0]);
+	// fprintf(MYFILEPR,"irefb: %f \n", iref_aB[1]);
+    // fprintf(MYFILEPR," \n");
 
     
     //// MPC

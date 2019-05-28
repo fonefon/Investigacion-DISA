@@ -1,4 +1,4 @@
-#define S_FUNCTION_NAME  NPC_MPC_RL 
+#define S_FUNCTION_NAME  NPC_MPC_RL_N2 
 #define S_FUNCTION_LEVEL 2
 #define _USE_MATH_DEFINES
 
@@ -20,15 +20,15 @@ FILE *MYFILEPR;                         /*Declare file pointer to a file */
 /*Variables globales*/
 
 
-float iabc[3],i_aB[2],iref[3],iref_aB[2],iref2[3],iref2_aB[2],iJ_aB[2],iJ2_aB[2],ie[2];
+float iabc[3],i_aB[2],iref[3],iref_aB[2],iref2[3],iref2_aB[2],iJ_aB[2],iJ2_aB[2],ie[2],ie2[2];
 float vabc[3],v_aB[2];
 float pref;
 float Vph_rms;
 float ampli;
 float vdc,R,L;
 float Tsampling = 100e-6;
-float u_0[3],incr_u,u_act[3];
-float SECUENCIA[27*27][7],Uk2[27][4];
+float u_0[3],incr_u,u_act1,u_act2,u_act3;
+float Uk2[27][4];
 int a,b,c;
 float lambda,delta,J;
 // float seno[10000];
@@ -37,7 +37,7 @@ float lambda,delta,J;
 
 float Tabc_aB[2][3];
 
-int i,cont,j;
+int i,cont,k;
 float seq[27][4]={{-1.,-1.,-1.,true},{-1.,-1.,0.,true},{-1.,-1.,1.,true},{-1.,0.,-1.,true},{-1.,0.,0.,true},{-1.,0.,1.,true},
                      {-1.,1.,-1.,true},{-1.,1.,0.,true},{-1.,1.,1.,true},{0.,-1.,-1.,true},{0.,-1.,0.,true},{0.,-1.,1.,true},
                      {0.,0.,-1.,true},{0.,0.,0.,true},{0.,0.,1.,true},{0.,1.,-1.,true},{0.,1.,0.,true},{0.,1.,1.,true},
@@ -57,7 +57,7 @@ float seq[27][4]={{-1.,-1.,-1.,true},{-1.,-1.,0.,true},{-1.,-1.,1.,true},{-1.,0.
  */
 static void mdlInitializeSizes(SimStruct *S)
 {
-    MYFILEPR=fopen("my_data_file2","w");  /* Opens a file, whose name is my_data_file, for writing */ 
+    MYFILEPR=fopen("N2","w");  /* Opens a file, whose name is my_data_file, for writing */ 
     
     ssSetNumSFcnParams(S, 0);
     if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) {
@@ -160,12 +160,18 @@ static void mdlStart(SimStruct *S)
 
     for(i=1;i<=27;i++)
     {
-        for(j=1;j<=4;j++)
+        for(k=1;k<=4;k++)
         {
-            Uk2[i][j] = seq[i][j];
+            Uk2[i-1][k-1] = seq[i-1][k-1];
         }
     }
-    
+    // for(j=1;j<=27;j++)
+    //             {
+                    
+                    
+    //                     fprintf(MYFILEPR,"estados: %f %f %f \n", Uk2[j-1][0],Uk2[j-1][1],Uk2[j-1][2]);
+                    
+    //             }
     
 
 }
@@ -177,25 +183,30 @@ static void mdlStart(SimStruct *S)
  *    
  */
 
-static void Useq(float uabc[3])
+static void Useq(float a, float b, float c)
 {
     int i;
 
-    if(uabc[0]==-1)
+    for(i=1;i<=27;i++)
+    {
+        Uk2[i-1][3] = true;
+    }
+
+    if(a==-1)
     {
         for(i=19;i<=27;i++)
         {
             Uk2[i-1][3]=false;
         }
     }
-    if(uabc[0]==1)
+    if(a==1)
     {
         for(i=1;i<=9;i++)
         {
             Uk2[i-1][3]=false;
         }
     }
-    if(uabc[1]==-1)
+    if(b==-1)
     {
         for(i=7;i<=9;i++)
         {
@@ -210,7 +221,7 @@ static void Useq(float uabc[3])
             Uk2[i-1][3]=false;
         }  
     }
-    if(uabc[1]==1)
+    if(b==1)
     {
         for(i=1;i<=3;i++)
         {
@@ -225,14 +236,14 @@ static void Useq(float uabc[3])
             Uk2[i-1][3]=false;
         }  
     }
-    if(uabc[2]==-1)
+    if(c==-1)
     {
         for(i=3;i<=27;i=i+3)
         {
             Uk2[i-1][3]=false;
         }
     }
-    if(uabc[2]==1)
+    if(c==1)
     {
         for(i=1;i<=27;i=i+3)
         {
@@ -338,21 +349,21 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
 	// iref[1] = Tabc_aB[0][1]*iref_aB[0]+Tabc_aB[1][1]*iref_aB[1];
 	// iref[2] = Tabc_aB[0][2]*iref_aB[0]+Tabc_aB[1][2]*iref_aB[1];
 	
-	fprintf(MYFILEPR,"iaref: %f \n", iref[0]);
-	fprintf(MYFILEPR,"ibref: %f \n", iref[1]);
-	fprintf(MYFILEPR,"icref: %f \n", iref[2]);
-    fprintf(MYFILEPR,"ia: %f \n", iabc[0]);
-	fprintf(MYFILEPR,"ib: %f \n", iabc[1]);
-	fprintf(MYFILEPR,"ic: %f \n", iabc[2]);
+	// fprintf(MYFILEPR,"iaref: %f \n", iref[0]);
+	// fprintf(MYFILEPR,"ibref: %f \n", iref[1]);
+	// fprintf(MYFILEPR,"icref: %f \n", iref[2]);
+    // fprintf(MYFILEPR,"ia: %f \n", iabc[0]);
+	// fprintf(MYFILEPR,"ib: %f \n", iabc[1]);
+	// fprintf(MYFILEPR,"ic: %f \n", iabc[2]);
 	
-    fprintf(MYFILEPR," \n");
-    fprintf(MYFILEPR,"ialfa: %f \n", i_aB[0]);
-	fprintf(MYFILEPR,"ibeta: %f \n", i_aB[1]);
+    // fprintf(MYFILEPR," \n");
+    // fprintf(MYFILEPR,"ialfa: %f \n", i_aB[0]);
+	// fprintf(MYFILEPR,"ibeta: %f \n", i_aB[1]);
 
-    fprintf(MYFILEPR," \n");
-    fprintf(MYFILEPR,"irefa: %f \n", iref_aB[0]);
-	fprintf(MYFILEPR,"irefb: %f \n", iref_aB[1]);
-    fprintf(MYFILEPR," \n");
+    // fprintf(MYFILEPR," \n");
+    // fprintf(MYFILEPR,"irefa: %f \n", iref_aB[0]);
+	// fprintf(MYFILEPR,"irefb: %f \n", iref_aB[1]);
+    // fprintf(MYFILEPR," \n");
 
     
     //// MPC
@@ -421,59 +432,86 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     
     // Calculo funcion de coste
     
-//     fprintf(MYFILEPR,"estado actual: %f %f %f \n", uabc[0],uabc[1],uabc[2]);
     
-    // for(i=1;i<=27;i++)
-    // {
-    //     fprintf(MYFILEPR,"%d",i);
-    //     // if(Uk[i-1][3] == true)
-    //     // {
-    //     //         fprintf(MYFILEPR,"posible: %f %f %f \n", Uk[i-1][0],Uk[i-1][1],Uk[i-1][2]);
-    //     // }
-    // }
     
     for(i=1;i<=27;i++)
     {
         if(Uk[i-1][3] == true)
         {
-            u_act[0] = Uk[i-1][0];
-            u_act[1] = Uk[i-1][1];
-            u_act[2] = Uk[i-1][2];
+            u_act1 = Uk[i-1][0];
+            u_act2 = Uk[i-1][1];
+            u_act3 = Uk[i-1][2];
 
             iJ_aB[0] = (1./(R*Tsampling+L))*(L*i_aB[0]+Tsampling*vdc/3.*sqrt(3./2.)*(Tabc_aB[0][0]*Uk[i-1][0]+Tabc_aB[0][1]*Uk[i-1][1]+Tabc_aB[0][2]*Uk[i-1][2]));
             iJ_aB[1] = (1./(R*Tsampling+L))*(L*i_aB[1]+Tsampling*vdc/3.*sqrt(3./2.)*(Tabc_aB[1][0]*Uk[i-1][0]+Tabc_aB[1][1]*Uk[i-1][1]+Tabc_aB[1][2]*Uk[i-1][2]));
+
+            ie[0] = iref_aB[0]-iJ_aB[0];
+            ie[1] = iref_aB[1]-iJ_aB[1];
+
+            incr_u=fabsf(Uk[i-1][0]-u_0[0])+
+                   fabsf(Uk[i-1][1]-u_0[1])+
+                   fabsf(Uk[i-1][2]-u_0[2]);
 			
-            for(j=1;j<=27;j++) // SEGUNDO HORIZONTE Y MINIMIZACION
+            if((ie[0]*ie[0]+ie[1]*ie[1] + lambda*incr_u) < Jmin)
             {
-                Useq(u_act);
+                Useq(u_act1,u_act2,u_act3);
 
-                iJ2_aB[0] = (1./(R*Tsampling+L))*(L*iJ_aB[0]+Tsampling*vdc/3.*sqrt(3./2.)*(Tabc_aB[0][0]*Uk2[j-1][0]+Tabc_aB[0][1]*Uk2[j-1][1]+Tabc_aB[0][2]*Uk2[j-1][2]));
-                iJ2_aB[1] = (1./(R*Tsampling+L))*(L*iJ_aB[1]+Tsampling*vdc/3.*sqrt(3./2.)*(Tabc_aB[1][0]*Uk2[j-1][0]+Tabc_aB[1][1]*Uk2[j-1][1]+Tabc_aB[1][2]*Uk2[j-1][2]));
-
-                ie[0] = iref_aB[0]-iJ_aB[0] + iref2_aB[0]-iJ2_aB[0];
-                ie[1] = iref_aB[1]-iJ_aB[1] + iref2_aB[0]-iJ2_aB[0];
-
-                incr_u=fabsf(Uk[i-1][0]-u_0[0])+
-                       fabsf(Uk[i-1][1]-u_0[1])+
-                       fabsf(Uk[i-1][2]-u_0[2])+
-                       fabsf(Uk2[j-1][0]-Uk[i-1][0])+
-                       fabsf(Uk2[j-1][1]-Uk[i-1][1])+
-                       fabsf(Uk2[j-1][2]-Uk[i-1][2]);
-
-                J=ie[0]*ie[0]+ie[1]*ie[1]+lambda*incr_u;
-
-                if(J<Jmin)
+                fprintf(MYFILEPR,"estado 1: %f %f %f \n", u_act1,u_act2,u_act3);
+    
+                for(k=1;k<=27;k++)
                 {
-                    Jmin = J;
-                    a = Uk[i-1][0];
-                    b = Uk[i-1][1];
-                    c = Uk[i-1][2];
-                    fprintf(MYFILEPR,"cost: %f \n", Jmin);
-                    fprintf(MYFILEPR,"a: %d \n", a);
-                    fprintf(MYFILEPR,"b: %d \n", b);
-                    fprintf(MYFILEPR,"c: %d \n", c); 
+                    // fprintf(MYFILEPR,"%d",j);
+                    if(Uk2[k-1][3] == true)
+                    {
+                        fprintf(MYFILEPR,"posible: %f %f %f \n", Uk2[k-1][0],Uk2[k-1][1],Uk2[k-1][2]);
+                    }
+                }
+
+                for(k=1;k<=27;k++) // SEGUNDO HORIZONTE Y MINIMIZACION
+                {
+
+                    if(Uk2[k-1][3] == true)
+                    {
+
+                        iJ2_aB[0] = (1./(R*Tsampling+L))*(L*iJ_aB[0]+Tsampling*vdc/3.*sqrt(3./2.)*(Tabc_aB[0][0]*Uk2[k-1][0]+Tabc_aB[0][1]*Uk2[k-1][1]+Tabc_aB[0][2]*Uk2[k-1][2]));
+                        iJ2_aB[1] = (1./(R*Tsampling+L))*(L*iJ_aB[1]+Tsampling*vdc/3.*sqrt(3./2.)*(Tabc_aB[1][0]*Uk2[k-1][0]+Tabc_aB[1][1]*Uk2[k-1][1]+Tabc_aB[1][2]*Uk2[k-1][2]));
+
+                        ie2[0] = iref2_aB[0]-iJ2_aB[0];
+                        ie2[1] = iref2_aB[1]-iJ2_aB[1];
+
+                        incr_u = incr_u+
+                            fabsf(Uk2[k-1][0]-Uk[i-1][0])+
+                            fabsf(Uk2[k-1][1]-Uk[i-1][1])+
+                            fabsf(Uk2[k-1][2]-Uk[i-1][2]);
+
+                        J=ie[0]*ie[0]+ie[1]*ie[1]+ie2[0]*ie2[0]+ie2[1]*ie2[1]+lambda*incr_u;
+                    
+
+                        if(J<Jmin)
+                        {
+                            Jmin = J;
+                            a = Uk[i-1][0];
+                            b = Uk[i-1][1];
+                            c = Uk[i-1][2];
+                            
+                            fprintf(MYFILEPR,"a: %f \n", Uk[i-1][0]);
+                            fprintf(MYFILEPR,"b: %f \n", Uk[i-1][1]);
+                            fprintf(MYFILEPR,"c: %f \n", Uk[i-1][2]);
+                            fprintf(MYFILEPR,"a2: %f \n", Uk2[k-1][0]);
+                            fprintf(MYFILEPR,"b2: %f \n", Uk2[k-1][1]);
+                            fprintf(MYFILEPR,"c2: %f \n", Uk2[k-1][2]);
+                            fprintf(MYFILEPR,"cost1: %f \n", (ie[0]*ie[0]+ie[1]*ie[1] + lambda*incr_u));
+                            fprintf(MYFILEPR,"cost1y2: %f \n", Jmin);
+
+                        }
+                    }
                 }
             }
+            else
+            {
+                fprintf(MYFILEPR,"cost1mayor: %f \n", (ie[0]*ie[0]+ie[1]*ie[1] + lambda*incr_u));
+            }
+            
 
             
 
