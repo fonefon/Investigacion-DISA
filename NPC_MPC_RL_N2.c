@@ -151,7 +151,7 @@ static void mdlStart(SimStruct *S)
     b = 0.;
     c = -1.;
     
-    lambda=5e-3; 
+    lambda=1e-2; 
 
     cont = 0;
 	
