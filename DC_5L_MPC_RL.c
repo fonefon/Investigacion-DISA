@@ -28,7 +28,7 @@ float ampli;
 float vdc,R,L;
 float Tsampling = 100e-6;
 float u[3],incr_u,Uk[125*3];
-int a,b,c;
+int f1,f2,f3,f4,f5;
 float lambda,delta,J;
 
 
@@ -36,7 +36,7 @@ float lambda,delta,J;
 
 float Tabc_aB[2][3];
 
-int i,cont;
+int i,cont,j;
 
 
 
@@ -137,9 +137,9 @@ static void mdlStart(SimStruct *S)
 	
     ampli = Vph_rms/sqrt(R*R + (2.*M_PI*50.*L)*(2.*M_PI*50.*L));
     
-    uabc[0]=0.;
-    uabc[1]=0.;
-    uabc[2]=0.;
+    u[0]=0.;
+    u[1]=0.;
+    u[2]=0.;
 
     a = 1.;
     b = 0.;
@@ -163,41 +163,49 @@ static void mdlStart(SimStruct *S)
  *    
  */
 
-void perm(){	
+static void perm(){	
 	int temp;
 	int numbers=3;
     float a[numbers+1];
 	int upto = 2, temp2;
 	int index = 0,i;
-	for( temp2 = 1 ; temp2 <= numbers; temp2++){
+	for( temp2 = 1 ; temp2 <= numbers; temp2++)
+    {
 		a[temp2]=-2.;
 	}
 	a[numbers]=-2.-1.;
 	temp=numbers;
-	while(1){
-		if(a[temp]==upto){
-			temp--;
-			if(temp==0)
-				break;
+	while(1)
+    {
+		if(a[temp]==upto)
+        {
+		    temp--;
+		    if(temp==0)
+			    break;
 		}
-		else{
-			a[temp]++;
-			while(temp<numbers){
-				temp++;
-				a[temp]=-2.;
-			}
- 
-		//printf("(");
-			for( temp2 = 1 ; temp2 <= numbers; temp2++){
-			   // printf("%d", a[temp2]);
-	
-				Uk[index] = a[temp2];
-				index++;
-			}
+		else
+        {
+	        a[temp]++;
+	        while(temp<numbers)
+            {
+		        temp++;
+		        a[temp]=-2.;
+		    }	
+		
+		
+            //printf("(");
+	        for( temp2 = 1 ; temp2 <= numbers; temp2++)
+            {
+			    Uk[index] = a[temp2];
+			    index++;
+		    }
 			//printf(")");
 		}
-	}
+    }
 }
+
+	
+
 
 static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q se llama al bloque
                                                 //aqui es donde va el algoritmo que yo quiera ejecutar
@@ -318,20 +326,20 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     //     // }
     // }
     
-    for(i=1;i<=27;i++)
+    for(i=1;i<=125;i++)
     {
-        if(Uk[i-1][3] == true)
+        if((fabsf(Uk[(i-1)*3] - u[0]) <= 1) && (fabsf(Uk[(i-1)*3 + 1] - u[1]) <= 1) && (fabsf(Uk[(i-1)*3 + 2] - u[2]) <= 1))
         {
 
-            iJ_aB[0] = (1./(R*Tsampling+L))*(L*i_aB[0]+Tsampling*vdc/3.*sqrt(3./2.)*(Tabc_aB[0][0]*Uk[i-1][0]+Tabc_aB[0][1]*Uk[i-1][1]+Tabc_aB[0][2]*Uk[i-1][2]));
-            iJ_aB[1] = (1./(R*Tsampling+L))*(L*i_aB[1]+Tsampling*vdc/3.*sqrt(3./2.)*(Tabc_aB[1][0]*Uk[i-1][0]+Tabc_aB[1][1]*Uk[i-1][1]+Tabc_aB[1][2]*Uk[i-1][2]));
+            iJ_aB[0] = (1./(R*Tsampling+L))*(L*i_aB[0]+Tsampling*vdc/6.*sqrt(3./2.)*(Tabc_aB[0][0]*Uk[(i-1)*3]+Tabc_aB[0][1]*Uk[(i-1)*3 + 1]+Tabc_aB[0][2]*Uk[(i-1)*3 + 2]));
+            iJ_aB[1] = (1./(R*Tsampling+L))*(L*i_aB[1]+Tsampling*vdc/6.*sqrt(3./2.)*(Tabc_aB[1][0]*Uk[(i-1)*3]+Tabc_aB[1][1]*Uk[(i-1)*3 + 1]+Tabc_aB[1][2]*Uk[(i-1)*3 + 2]));
 			
             ie[0] = iref_aB[0]-iJ_aB[0];
             ie[1] = iref_aB[1]-iJ_aB[1];
 
-            incr_u=fabsf(Uk[i-1][0]-uabc[0])+
-                   fabsf(Uk[i-1][1]-uabc[1])+
-                   fabsf(Uk[i-1][2]-uabc[2]);
+            incr_u=fabsf(Uk[(i-1)*3] - u[0])+
+                   fabsf(Uk[(i-1)*3 + 1] - u[1])+
+                   fabsf(Uk[(i-1)*3 + 2] - u[2]);
 
             J=ie[0]*ie[0]+ie[1]*ie[1]+lambda*incr_u;
 
@@ -349,15 +357,13 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
         }
     }
     
-   uabc[0]   = a;
-   uabc[1]   = b;
-   uabc[2]   = c; 
+   u[0]   = a;
+   u[1]   = b;
+   u[2]   = c; 
    // TORQUE=Xm/0.78/Xr*(flux_r*is_dq[1]);
    // TORQUE=Xm/0.78/Xr*(histphir_a[0]*is_aB[1]-histphir_B[0]*is_aB[0]);
    
-   ua[0]   = a;
-   ub[0]   = b;
-   uc[0]   = c; 
+  
 
 //    pJ[0] = 2.*sin(50. * (2. * M_PI) * cont / 10000.);
 //    pphir_dq[0] = 2.*sin(50. * (2. * M_PI) * cont / 10000. + 2.*M_PI/3.);
@@ -379,75 +385,142 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
        
    switch(a) {
 
+       case 2 :
+          Sa1[0]=1;
+          Sa2[0]=1;
+          Sa3[0]=1;
+          Sa4[0]=1;
+          break;
+
        case 1 :
-          S11[0]=1;
-          S12[0]=1;
+          Sa1[0]=0;
+          Sa2[0]=1;
+          Sa3[0]=1;
+          Sa4[0]=1;
           break; 
 
        case 0  :
-          S11[0]=0;
-          S12[0]=1;
+          Sa1[0]=0;
+          Sa2[0]=0;
+          Sa3[0]=1;
+          Sa4[0]=1;
           break; 
 
        case -1 :
-          S11[0]=0;
-          S12[0]=0;
+          Sa1[0]=0;
+          Sa2[0]=0;
+          Sa3[0]=0;
+          Sa4[0]=1;
+          break;
+
+       case -2 :
+          Sa1[0]=0;
+          Sa2[0]=0;
+          Sa3[0]=0;
+          Sa4[0]=0;
           break; 
+     
 
        default : 
-          S11[0]=100;
-          S12[0]=100;
+          Sa1[0]=100;
+          Sa2[0]=100;
+          Sa3[0]=100;
+          Sa4[0]=100;
    }  
    switch(b) {
 
+       case 2 :
+          Sb1[0]=1;
+          Sb2[0]=1;
+          Sb3[0]=1;
+          Sb4[0]=1;
+          break;
+
        case 1 :
-          S21[0]=1;
-          S22[0]=1;
+          Sb1[0]=0;
+          Sb2[0]=1;
+          Sb3[0]=1;
+          Sb4[0]=1;
           break; 
 
        case 0  :
-          S21[0]=0;
-          S22[0]=1;
+          Sb1[0]=0;
+          Sb2[0]=0;
+          Sb3[0]=1;
+          Sb4[0]=1;
           break; 
 
        case -1 :
-          S21[0]=0;
-          S22[0]=0;
+          Sb1[0]=0;
+          Sb2[0]=0;
+          Sb3[0]=0;
+          Sb4[0]=1;
+          break;
+
+       case -2 :
+          Sb1[0]=0;
+          Sb2[0]=0;
+          Sb3[0]=0;
+          Sb4[0]=0;
           break; 
+     
 
        default : 
-          S21[0]=100;
-          S22[0]=100;
-   
-   } 
+          Sb1[0]=100;
+          Sb2[0]=100;
+          Sb3[0]=100;
+          Sb4[0]=100;
+   }  
    switch(c) {
-    
+c       case 2 :
+          Sc1[0]=1;
+          Sc2[0]=1;
+          Sc3[0]=1;
+          Sc4[0]=1;
+          break;
+
        case 1 :
-          S31[0]=1;
-          S32[0]=1;
+          Sc1[0]=0;
+          Sc2[0]=1;
+          Sc3[0]=1;
+          Sc4[0]=1;
           break; 
 
        case 0  :
-          S31[0]=0;
-          S32[0]=1;
+          Sc1[0]=0;
+          Sc2[0]=0;
+          Sc3[0]=1;
+          Sc4[0]=1;
           break; 
 
        case -1 :
-          S31[0]=0;
-          S32[0]=0;
+          Sc1[0]=0;
+          Sc2[0]=0;
+          Sc3[0]=0;
+          Sc4[0]=1;
+          break;
+
+       case -2 :
+          Sc1[0]=0;
+          Sc2[0]=0;
+          Sc3[0]=0;
+          Sc4[0]=0;
           break; 
+     
 
        default : 
-          S31[0]=100;
-          S32[0]=100;
-   } 
+          Sc1[0]=100;
+          Sc2[0]=100;
+          Sc3[0]=100;
+          Sc4[0]=100;
+   }  
    
- fprintf(MYFILEPR,"S11: %f \n", S11[0]);
- fprintf(MYFILEPR,"S12: %f \n", S12[0]);
- fprintf(MYFILEPR,"S21: %f \n", S21[0]);
- fprintf(MYFILEPR,"S31: %f \n", S22[0]);
- fprintf(MYFILEPR,"S32: %f \n", S31[0]);  
- fprintf(MYFILEPR,"S22: %f \n", S32[0]);
+//  fprintf(MYFILEPR,"S11: %f \n", S11[0]);
+//  fprintf(MYFILEPR,"S12: %f \n", S12[0]);
+//  fprintf(MYFILEPR,"S21: %f \n", S21[0]);
+//  fprintf(MYFILEPR,"S31: %f \n", S22[0]);
+//  fprintf(MYFILEPR,"S32: %f \n", S31[0]);  
+//  fprintf(MYFILEPR,"S22: %f \n", S32[0]);
     
 }
 
