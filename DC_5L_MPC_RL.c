@@ -20,15 +20,17 @@ FILE *MYFILEPR;                         /*Declare file pointer to a file */
 /*Variables globales*/
 
 
-float iabc[3],i_aB[2],iref[3],iref_aB[2],iJ_aB[2],ie[2];
+float iabc[3],i_aB[2],iref[3],iref_aB[2],iJ_aB[2],iJ_abc[3],ie[2];
 float vabc[3],v_aB[2];
 float pref;
 float Vph_rms;
 float ampli;
-float vdc,R,L;
+float vdc,R,L,idc;
 float Tsampling = 100e-6;
 float u[3],incr_u,Uk[125*3];
-int f1,f2,f3,f4,f5;
+int a,b,c;
+float *fa, *fb, *fc;
+float C1,C2,C3,C4,vd1,vd2,vd3;
 float lambda,delta,J;
 
 
@@ -58,14 +60,14 @@ static void mdlInitializeSizes(SimStruct *S)
         return; /* Parameter mismatch will be reported by Simulink */
     }
 
-    if (!ssSetNumInputPorts(S, 2)) return; //aqui defino el numero de entradas
+    if (!ssSetNumInputPorts(S, 3)) return; //aqui defino el numero de entradas
     //ssSetInputPortWidth(S, 0, DYNAMICALLY_SIZED);
     ssSetInputPortWidth(S, 0, 3); // dimension de la entrada 
     ssSetInputPortDirectFeedThrough(S, 0, 1); //no la usamos, define el comportamiento de una entrada
     ssSetInputPortWidth(S, 1, 3); //
     ssSetInputPortDirectFeedThrough(S, 1, 1);
-//     ssSetInputPortWidth(S, 2, 1); //
-//     ssSetInputPortDirectFeedThrough(S, 2, 1);
+    ssSetInputPortWidth(S, 2, 1); //
+    ssSetInputPortDirectFeedThrough(S, 2, 1);
 //     ssSetInputPortWidth(S, 3, 1); //
 //     ssSetInputPortDirectFeedThrough(S, 3, 1);
 
@@ -116,6 +118,47 @@ static void mdlInitializeSampleTimes(SimStruct *S)
  * Abstract:
  *
  */
+static void perm(){	
+	int temp;
+    int numbers=3;
+    float a[4];
+	int upto = 2, temp2;
+	int index = 0,i;
+	for( temp2 = 1 ; temp2 <= numbers; temp2++)
+    {
+		a[temp2]=-2.;
+	}
+	a[numbers]=-2.-1.;
+	temp=numbers;
+	while(1)
+    {
+		if(a[temp]==upto)
+        {
+		    temp--;
+		    if(temp==0)
+			    break;
+		}
+		else
+        {
+	        a[temp]++;
+	        while(temp<numbers)
+            {
+		        temp++;
+		        a[temp]=-2.;
+		    }	
+		
+		
+            //printf("(");
+	        for( temp2 = 1 ; temp2 <= numbers; temp2++)
+            {
+			    Uk[index] = a[temp2];
+			    index++;
+		    }
+			//printf(")");
+		}
+    }
+}
+
 static void mdlStart(SimStruct *S) 
 {
 	Tabc_aB[0][0]=sqrt(2./3.);
@@ -163,47 +206,54 @@ static void mdlStart(SimStruct *S)
  *    
  */
 
-static void perm(){	
-	int temp;
-	int numbers=3;
-    float a[numbers+1];
-	int upto = 2, temp2;
-	int index = 0,i;
-	for( temp2 = 1 ; temp2 <= numbers; temp2++)
-    {
-		a[temp2]=-2.;
-	}
-	a[numbers]=-2.-1.;
-	temp=numbers;
-	while(1)
-    {
-		if(a[temp]==upto)
-        {
-		    temp--;
-		    if(temp==0)
-			    break;
-		}
-		else
-        {
-	        a[temp]++;
-	        while(temp<numbers)
-            {
-		        temp++;
-		        a[temp]=-2.;
-		    }	
-		
-		
-            //printf("(");
-	        for( temp2 = 1 ; temp2 <= numbers; temp2++)
-            {
-			    Uk[index] = a[temp2];
-			    index++;
-		    }
-			//printf(")");
-		}
-    }
-}
+static float *efes(float u)
+{
+    static float f[4];
 
+    if(u == 2)
+        f[0] = 1.;
+    else
+    {
+        f[1] = 0.;
+        f[2] = 0.;
+        f[3] = 0.;
+    }
+
+    if(u == 1)
+        f[1] = 1.;
+    else
+    {
+        f[0] = 0.;
+        f[2] = 0.;
+        f[3] = 0.;
+    }
+
+    if(u == 0)
+    {
+        f[0] = 0.;
+        f[1] = 0.;
+        f[2] = 0.;
+        f[3] = 0.;
+    }
+
+    if(u == -1)
+        f[2] = 1.;
+    else
+    {
+        f[1] = 0.;
+        f[0] = 0.;
+        f[3] = 0.;
+    }
+    if(u == -2)
+        f[3] = 1.;
+    else
+    {
+        f[1] = 0.;
+        f[2] = 0.;
+        f[0] = 0.;
+    }
+    return f;
+}
 	
 
 
@@ -215,7 +265,7 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     
 	InputRealPtrsType pvabc = ssGetInputPortRealSignalPtrs(S,1);
 //     
-//     InputRealPtrsType pwr = ssGetInputPortRealSignalPtrs(S,2);
+    InputRealPtrsType pidc = ssGetInputPortRealSignalPtrs(S,2);
     
 //     InputRealPtrsType pteta = ssGetInputPortRealSignalPtrs(S,3);
     
@@ -260,6 +310,8 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
 	vabc[0] = *pvabc[0];
     vabc[1] = *pvabc[1];
     vabc[2] = *pvabc[2];
+
+    idc = *pidc[0];
 	
 	// Transformadas
     
@@ -334,21 +386,48 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
             iJ_aB[0] = (1./(R*Tsampling+L))*(L*i_aB[0]+Tsampling*vdc/6.*sqrt(3./2.)*(Tabc_aB[0][0]*Uk[(i-1)*3]+Tabc_aB[0][1]*Uk[(i-1)*3 + 1]+Tabc_aB[0][2]*Uk[(i-1)*3 + 2]));
             iJ_aB[1] = (1./(R*Tsampling+L))*(L*i_aB[1]+Tsampling*vdc/6.*sqrt(3./2.)*(Tabc_aB[1][0]*Uk[(i-1)*3]+Tabc_aB[1][1]*Uk[(i-1)*3 + 1]+Tabc_aB[1][2]*Uk[(i-1)*3 + 2]));
 			
+            // ERROR REFERENCIA
+
             ie[0] = iref_aB[0]-iJ_aB[0];
             ie[1] = iref_aB[1]-iJ_aB[1];
+
+            // COSTE DISPAROS
 
             incr_u=fabsf(Uk[(i-1)*3] - u[0])+
                    fabsf(Uk[(i-1)*3 + 1] - u[1])+
                    fabsf(Uk[(i-1)*3 + 2] - u[2]);
 
-            J=ie[0]*ie[0]+ie[1]*ie[1]+lambda*incr_u;
+            // DESBALANCEO CONDENSADORES
+
+            iJ_abc[0] = Tabc_aB[0][0]*iJ_aB[0]+Tabc_aB[1][0]*iJ_aB[1];
+	        iJ_abc[1] = Tabc_aB[0][1]*iJ_aB[0]+Tabc_aB[1][1]*iJ_aB[1];
+	        iJ_abc[2] = Tabc_aB[0][2]*iJ_aB[0]+Tabc_aB[1][2]*iJ_aB[1];
+
+            fa = efes(Uk[(i-1)*3]);
+            fb = efes(Uk[(i-1)*3 + 1]);
+            fc = efes(Uk[(i-1)*3 + 2]);
+
+            C1 = idc - *(fa)*iJ_abc[0] - *(fb)*iJ_abc[1] - *(fc)*iJ_abc[2];
+            C2 = idc - *(fa)*iJ_abc[0] - *(fb)*iJ_abc[1] - *(fc)*iJ_abc[2] - *(fa + 1)*iJ_abc[0] - *(fb + 1)*iJ_abc[1] - *(fc + 1)*iJ_abc[2];
+            C3 = idc + *(fa + 2)*iJ_abc[0] + *(fb + 2)*iJ_abc[1] + *(fc + 2)*iJ_abc[2] + *(fa + 3)*iJ_abc[0] + *(fb + 3)*iJ_abc[1] + *(fc + 3)*iJ_abc[2];
+            C4 = idc + *(fa + 3)*iJ_abc[0] + *(fb + 3)*iJ_abc[1] + *(fc + 3)*iJ_abc[2];
+
+            vd1 = C1 - C4;
+            vd2 = C2 - C3;
+            vd3 = C3 - C4;
+
+            vd1 = fabsf(vd1);
+            vd2 = fabsf(vd2);
+            vd3 = fabsf(vd3);
+
+            J=ie[0]*ie[0]+ie[1]*ie[1] + lambda*incr_u + vd1+vd2+vd3;
 
             if(J<Jmin)
             {
                 Jmin = J;
-                a = Uk[i-1][0];
-                b = Uk[i-1][1];
-                c = Uk[i-1][2];
+                a = Uk[(i-1)*3];
+                b = Uk[(i-1)*3 + 1];
+                c = Uk[(i-1)*3 + 2];
                  fprintf(MYFILEPR,"cost: %f \n", Jmin);
                  fprintf(MYFILEPR,"a: %d \n", a);
                  fprintf(MYFILEPR,"b: %d \n", b);
@@ -472,7 +551,7 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
           Sb4[0]=100;
    }  
    switch(c) {
-c       case 2 :
+       case 2 :
           Sc1[0]=1;
           Sc2[0]=1;
           Sc3[0]=1;
