@@ -323,13 +323,13 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
 	
 	// Calculo corrientes de referencia
 
-    iref[0] = ampli*sin(50. * (2. * M_PI) * cont / 10000.);
-    iref[1] = ampli*sin(50. * (2. * M_PI) * cont / 10000. + 2.*M_PI/3.);
-    iref[2] = ampli*sin(50. * (2. * M_PI) * cont / 10000. + 4.*M_PI/3.);
+    iref[0] = ampli*sin(50. * (2. * M_PI) * cont * Tsampling);
+    iref[1] = ampli*sin(50. * (2. * M_PI) * cont * Tsampling + 2.*M_PI/3.);
+    iref[2] = ampli*sin(50. * (2. * M_PI) * cont * Tsampling + 4.*M_PI/3.);
 
-    iref2[0] = ampli*sin(50. * (2. * M_PI) * (cont + 1.) / 10000.);
-    iref2[1] = ampli*sin(50. * (2. * M_PI) * (cont + 1.) / 10000. + 2.*M_PI/3.);
-    iref2[2] = ampli*sin(50. * (2. * M_PI) * (cont + 1.) / 10000. + 4.*M_PI/3.);
+    iref2[0] = ampli*sin(50. * (2. * M_PI) * (cont + 1.) * Tsampling);
+    iref2[1] = ampli*sin(50. * (2. * M_PI) * (cont + 1.) * Tsampling + 2.*M_PI/3.);
+    iref2[2] = ampli*sin(50. * (2. * M_PI) * (cont + 1.) * Tsampling + 4.*M_PI/3.);
 
     iref_aB[0] = Tabc_aB[0][0]*iref[0]+Tabc_aB[0][1]*iref[1]+Tabc_aB[0][2]*iref[2];
     iref_aB[1] = Tabc_aB[1][0]*iref[0]+Tabc_aB[1][1]*iref[1]+Tabc_aB[1][2]*iref[2];
@@ -535,7 +535,7 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
 //    pphir_dq[0] = 2.*sin(50. * (2. * M_PI) * cont / 10000. + 2.*M_PI/3.);
 //    pphir_dq[1] = 2.*sin(50. * (2. * M_PI) * cont / 10000. + 4.*M_PI/3.);
    cont++;
-   if(cont == 10000)
+   if(cont == 1/Tsampling)
         cont = 0;
 
         
