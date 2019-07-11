@@ -1,4 +1,4 @@
-#define S_FUNCTION_NAME  DC_5L_MPC_RL
+#define S_FUNCTION_NAME  DC_5L_MPC_RL_N2
 #define S_FUNCTION_LEVEL 2
 #define _USE_MATH_DEFINES
 
@@ -41,7 +41,7 @@ float lambda,lambdaDC,delta,J;
 
 float Tabc_aB[2][3];
 
-int i,cont,j;
+int i,cont;
 
 
 
@@ -196,7 +196,7 @@ static void mdlStart(SimStruct *S)
     b = 0.;
     c = -1.;
     
-    lambda = 1e-2;
+    lambda = 0e-3;
     lambdaDC = .75;
 
     cont = 0;
