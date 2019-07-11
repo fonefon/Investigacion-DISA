@@ -26,7 +26,7 @@ float pref;
 float Vph_rms;
 float ampli;
 float vdc,idc,R,L,C;
-float Tsampling = 100e-6;
+float Tsampling = 50e-6;
 float u[3],incr_u,Uk[125*3];
 int a,b,c;
 float *fa, *fb, *fc;
@@ -77,7 +77,7 @@ static void mdlInitializeSizes(SimStruct *S)
     ssSetInputPortDirectFeedThrough(S, 3, 1);
 
 
-    if (!ssSetNumOutputPorts(S,12)) return; //
+    if (!ssSetNumOutputPorts(S,13)) return; //
     //ssSetOutputPortWidth(S, 0, DYNAMICALLY_SIZED);
     ssSetOutputPortWidth(S, 0, 1);
     ssSetOutputPortWidth(S, 1, 1);
@@ -91,6 +91,7 @@ static void mdlInitializeSizes(SimStruct *S)
     ssSetOutputPortWidth(S, 9, 1);
     ssSetOutputPortWidth(S, 10, 1);
     ssSetOutputPortWidth(S, 11, 1);
+    ssSetOutputPortWidth(S, 12, 1);
     
     ssSetNumSampleTimes(S, 1);
 
@@ -195,8 +196,8 @@ static void mdlStart(SimStruct *S)
     b = 0.;
     c = -1.;
     
-    lambda = 1e-2;
-    lambdaDC = 10.;
+    lambda = 0e-3;
+    lambdaDC = .75;
 
     cont = 0;
     perm();
@@ -293,6 +294,8 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     real_T            *Sc3    = ssGetOutputPortRealSignal(S,10);
     
     real_T            *Sc4    = ssGetOutputPortRealSignal(S,11);
+
+    real_T            *pSUMiabc    = ssGetOutputPortRealSignal(S,12);
    
     // Vector de transiciones
     
@@ -307,6 +310,8 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     iabc[0] = *piabc[0];
     iabc[1] = *piabc[1];
     iabc[2] = *piabc[2];
+
+    pSUMiabc[0] = iabc[0] + iabc[1] + iabc[2];
 	
 	vabc[0] = *pvabc[0];
     vabc[1] = *pvabc[1];
@@ -316,6 +321,10 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     v_C[1] = *pv_C[1];
     v_C[2] = *pv_C[2];
     v_C[3] = *pv_C[3];
+
+    vd1 = v_C[0] - v_C[3];
+    vd2 = v_C[1] - v_C[2];
+    vd3 = v_C[2] - v_C[3];
 
     idc = *pidc[0];
 	
@@ -447,17 +456,23 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
             // vd2 = v_C[1] - v_C[2] + (Tsampling/C)*(C2 - C3);
             // vd3 = v_C[2] - v_C[3] + (Tsampling/C)*(C3 - C4);
 
-            vd1 = 700./4. - v_C[0] - (Tsampling/C)*(C1 + idc);
-            vd2 = 700./4. - v_C[1] - (Tsampling/C)*(C2 + idc);
-            vd3 = 700./4. - v_C[2] - (Tsampling/C)*(C3 + idc);
-            vd4 = 700./4. - v_C[3] - (Tsampling/C)*(C4 + idc);
+            // vd1 = 700./4. - v_C[0] - (Tsampling/C)*(C1 + idc);
+            // vd2 = 700./4. - v_C[1] - (Tsampling/C)*(C2 + idc);
+            // vd3 = 700./4. - v_C[2] - (Tsampling/C)*(C3 + idc);
+            // vd4 = 700./4. - v_C[3] - (Tsampling/C)*(C4 + idc);
 
-            vd1 = fabsf(vd1);
-            vd2 = fabsf(vd2);
-            vd3 = fabsf(vd3);
-            vd4 = fabsf(vd4);
+            
 
-            J=ie[0]*ie[0]+ie[1]*ie[1] + lambda*incr_u + lambdaDC*(vd1+vd2+vd3+vd4);
+            // vd1 = fabsf(vd1);
+            // vd2 = fabsf(vd2);
+            // vd3 = fabsf(vd3);
+            // vd4 = fabsf(vd4);
+
+            // fprintf(MYFILEPR,"vd1: %f \n", vd1);
+            // fprintf(MYFILEPR,"vd2: %f \n", vd2);
+            // fprintf(MYFILEPR,"vd3: %f \n", vd3); 
+
+            J=ie[0]*ie[0]+ie[1]*ie[1] + lambda*incr_u + lambdaDC*(vd1*(C1 - C4)+vd2*(C2 - C3)+vd3*(C3 - C4));//+vd4);
 
             if(J<Jmin)
             {
@@ -482,7 +497,7 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
 
 
    cont++;
-   if(cont == 1/Tsampling)
+   if(cont == 1./Tsampling)
         cont = 0;
 
         

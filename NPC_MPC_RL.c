@@ -197,7 +197,7 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     
     real_T            *uc    = ssGetOutputPortRealSignal(S,8);
     
-    real_T            *pJ    = ssGetOutputPortRealSignal(S,9);
+    real_T            *pSUMiabc    = ssGetOutputPortRealSignal(S,9);
     
     real_T            *pphir_dq    = ssGetOutputPortRealSignal(S,10);
     
@@ -220,7 +220,17 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     iabc[0] = *piabc[0];
     iabc[1] = *piabc[1];
     iabc[2] = *piabc[2];
-	
+
+    // if(fabsf(iabc[0]) >= fabsf(iabc[1]) && fabsf(iabc[0]) >= fabsf(iabc[2])){
+    //     pSUMiabc[0] = fabsf(iabc[0]);
+    // } else if(fabsf(iabc[1]) >= fabsf(iabc[2]) && fabsf(iabc[1]) >= fabsf(iabc[0])) {
+    //    pSUMiabc[0] = fabsf(iabc[1]);
+    // } else{   
+    //     pSUMiabc[0] = fabsf(iabc[2]);
+    // }
+
+	pSUMiabc[0] = iabc[0] + iabc[1];//+ iabc[2];
+
 	vabc[0] = *pvabc[0];
     vabc[1] = *pvabc[1];
     vabc[2] = *pvabc[2];
@@ -235,9 +245,9 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
 	
 	// Calculo corrientes de referencia
 
-    iref[0] = ampli*sin(50. * (2. * M_PI) * cont / 10000.);
-    iref[1] = ampli*sin(50. * (2. * M_PI) * cont / 10000. + 2.*M_PI/3.);
-    iref[2] = ampli*sin(50. * (2. * M_PI) * cont / 10000. + 4.*M_PI/3.);
+    iref[0] = ampli*sin(50. * (2. * M_PI) * cont * Tsampling);
+    iref[1] = ampli*sin(50. * (2. * M_PI) * cont * Tsampling + 2.*M_PI/3.);
+    iref[2] = ampli*sin(50. * (2. * M_PI) * cont * Tsampling + 4.*M_PI/3.);
 
     iref_aB[0] = Tabc_aB[0][0]*iref[0]+Tabc_aB[0][1]*iref[1]+Tabc_aB[0][2]*iref[2];
     iref_aB[1] = Tabc_aB[1][0]*iref[0]+Tabc_aB[1][1]*iref[1]+Tabc_aB[1][2]*iref[2];
@@ -392,7 +402,7 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
 //    pphir_dq[0] = 2.*sin(50. * (2. * M_PI) * cont / 10000. + 2.*M_PI/3.);
 //    pphir_dq[1] = 2.*sin(50. * (2. * M_PI) * cont / 10000. + 4.*M_PI/3.);
    cont++;
-   if(cont == 10000)
+   if(cont == 1./Tsampling)
         cont = 0;
 
         
