@@ -20,28 +20,29 @@ FILE *MYFILEPR;                         /*Declare file pointer to a file */
 /*Variables globales*/
 
 
-float iabc[3],i_aB[2],iref[3],iref_aB[2],iJ_aB[2],iJ_abc[3],ie[2];
-float vabc[3],v_aB[2],v_C[4],i_C[4];
+float iabc[3],i_aB[2],iref[3],iref_aB[2],iJ_aB[2],iJ_abc[3],ie[2],iref2[3],iref2_aB[2];
+float vabc[3],v_aB[2],v_C[4];
 float pref;
 float Vph_rms;
 float ampli;
 float vdc,idc,R,L,C;
-float Tsampling = 50e-6;
-float u[3],incr_u,Uk[125*3];
+float Tsampling = 100e-6;
+float u[3],incr_u,*Uk,u_act1,u_act2,u_act3;
 int a,b,c;
 float *fa, *fb, *fc;
 float fa1xia,fa2xia,fa4xia,fa5xia;
 float fb1xib,fb2xib,fb4xib,fb5xib;
 float fc1xic,fc2xic,fc4xic,fc5xic;
-float C1,C2,C3,C4,vd1,vd2,vd3,vd4;
-float lambda,lambdaDC,delta,J;
+float Kirchhoff[4],vd[3];
+float lambda,lambdaDC,delta,J,Jmin;
+float cost;
 
 
 // float A,B;
 
 float Tabc_aB[2][3];
 
-int i,cont;
+int i,cont,k;
 
 
 
@@ -65,7 +66,7 @@ static void mdlInitializeSizes(SimStruct *S)
     }
 
 
-    if (!ssSetNumInputPorts(S, 4)) return; //aqui defino el numero de entradas
+    if (!ssSetNumInputPorts(S, 3)) return; //aqui defino el numero de entradas
     //ssSetInputPortWidth(S, 0, DYNAMICALLY_SIZED);
     ssSetInputPortWidth(S, 0, 3); // dimension de la entrada 
     ssSetInputPortDirectFeedThrough(S, 0, 1); //no la usamos, define el comportamiento de una entrada
@@ -73,8 +74,8 @@ static void mdlInitializeSizes(SimStruct *S)
     ssSetInputPortDirectFeedThrough(S, 1, 1);
     ssSetInputPortWidth(S, 2, 4); //
     ssSetInputPortDirectFeedThrough(S, 2, 1);
-    ssSetInputPortWidth(S, 3, 1); //
-    ssSetInputPortDirectFeedThrough(S, 3, 1);
+    // ssSetInputPortWidth(S, 3, 1); //
+    // ssSetInputPortDirectFeedThrough(S, 3, 1);
 
 
     if (!ssSetNumOutputPorts(S,13)) return; //
@@ -124,7 +125,9 @@ static void mdlInitializeSampleTimes(SimStruct *S)
  * Abstract:
  *
  */
-static void perm(){	
+static float *perm(){
+
+    static float seq[125*3];
 	int temp;
     int numbers=3;
     float a[4];
@@ -157,12 +160,13 @@ static void perm(){
             //printf("(");
 	        for( temp2 = 1 ; temp2 <= numbers; temp2++)
             {
-			    Uk[index] = a[temp2];
+			    seq[index] = a[temp2];
 			    index++;
 		    }
 			//printf(")");
 		}
     }
+    return seq;
 }
 
 static void mdlStart(SimStruct *S) 
@@ -182,7 +186,7 @@ static void mdlStart(SimStruct *S)
 
     R = 240.;
     L = 2e-3;
-    C = 3.3e-3;
+    C = 19.8e-3;
     vdc = 700.;
 	Vph_rms = 230.;
 	
@@ -196,11 +200,11 @@ static void mdlStart(SimStruct *S)
     b = 0.;
     c = -1.;
     
-    lambda = 0e-3;
-    lambdaDC = .75;
+    lambda = 1e-2;
+    lambdaDC = 1.;
 
     cont = 0;
-    perm();
+    Uk = perm();
 	
 	// A = 1-R*Tsampling/L;
 	// B = Tsampling*vdc/L/2.;
@@ -256,6 +260,78 @@ static float *efes(float u)
     }
     return f;
 }
+
+static void MPC_N2(float u1, float u2, float u3, float Kirchhoff2[4], float vd2[3])
+{
+    float iJ2_aB[2],ie2[2],incr_u2,iJ2_abc[3];
+    float *fa2, *fb2, *fc2;
+    float fa1xia2,fa2xia2,fa4xia2,fa5xia2;
+    float fb1xib2,fb2xib2,fb4xib2,fb5xib2;
+    float fc1xic2,fc2xic2,fc4xic2,fc5xic2;  
+    float C12,C22,C32,C42,vd12,vd22,vd32;
+    
+    iJ2_aB[0] = (1./(R*Tsampling+L))*(L*iJ_aB[0]+Tsampling*vdc/6.*sqrt(3./2.)*(Tabc_aB[0][0]*u1 + Tabc_aB[0][1]*u2 + Tabc_aB[0][2]*u3));
+    iJ2_aB[1] = (1./(R*Tsampling+L))*(L*iJ_aB[1]+Tsampling*vdc/6.*sqrt(3./2.)*(Tabc_aB[1][0]*u1 + Tabc_aB[1][1]*u2 + Tabc_aB[1][2]*u3));
+    
+    // ERROR REFERENCIA
+
+    ie2[0] = iref2_aB[0]-iJ2_aB[0];
+    ie2[1] = iref2_aB[1]-iJ2_aB[1];
+
+    // COSTE DISPAROS
+
+    incr_u2=fabsf(u1 - *(Uk+(i-1)*3))+
+            fabsf(u2 - *(Uk+(i-1)*3 + 1))+
+            fabsf(u3 - *(Uk+(i-1)*3 + 2));
+
+    // DESBALANCEO CONDENSADORES
+
+    iJ2_abc[0] = Tabc_aB[0][0]*iJ2_aB[0]+Tabc_aB[1][0]*iJ2_aB[1];
+    iJ2_abc[1] = Tabc_aB[0][1]*iJ2_aB[0]+Tabc_aB[1][1]*iJ2_aB[1];
+    iJ2_abc[2] = Tabc_aB[0][2]*iJ2_aB[0]+Tabc_aB[1][2]*iJ2_aB[1];
+
+    fa2 = efes(*(Uk+(i-1)*3));
+    fa1xia2 = *(fa2)*iJ2_abc[0];
+    fa2xia2 = *(fa2 + 1)*iJ2_abc[0];
+    fa4xia2 = *(fa2 + 2)*iJ2_abc[0];
+    fa5xia2 = *(fa2 + 3)*iJ2_abc[0];
+
+    fb2 = efes(*(Uk+(i-1)*3 + 1));
+    fb1xib2 = *(fb2)*iJ2_abc[1];
+    fb2xib2 = *(fb2 + 1)*iJ2_abc[1];
+    fb4xib2 = *(fb2 + 2)*iJ2_abc[1];
+    fb5xib2 = *(fb2 + 3)*iJ2_abc[1];
+
+    fc2 = efes(*(Uk+(i-1)*3 + 2));
+    fc1xic2 = *(fc2)*iJ2_abc[2];
+    fc2xic2 = *(fc2 + 1)*iJ2_abc[2];
+    fc4xic2 = *(fc2 + 2)*iJ2_abc[2];
+    fc5xic2 = *(fc2 + 3)*iJ2_abc[2];
+
+    C12 = - fa1xia2 - fb1xib2 - fc1xic2;
+    C22 = - fa1xia2 - fb1xib2 - fc1xic2 - fa2xia2 - fb2xib2 - fc2xic2;
+    C32 = fa4xia2 + fb4xib2 + fc4xic2 + fa5xia2 + fb5xib2 + fc5xic2;
+    C42 = fa5xia2 + fb5xib2 + fc5xic2;
+
+    vd12 = vd2[0] + Tsampling/C * (Kirchhoff2[0] - Kirchhoff2[3]);
+    vd22 = vd2[1] + Tsampling/C * (Kirchhoff2[1] - Kirchhoff2[2]);
+    vd32 = vd2[2] + Tsampling/C * (Kirchhoff2[2] - Kirchhoff2[3]);
+
+    J = cost + ie2[0]*ie2[0]+ie2[1]*ie2[1] + lambda*incr_u2 + lambdaDC*(vd12*(C12 - C42)+vd22*(C22 - C32)+vd32*(C32 - C42));
+
+    if(J<Jmin)
+    {
+        Jmin = J;
+        a = *(Uk+(i-1)*3);
+        b = *(Uk+(i-1)*3 + 1);
+        c = *(Uk+(i-1)*3 + 2);
+
+        // fprintf(MYFILEPR,"cost: %f \n", Jmin);
+        // fprintf(MYFILEPR,"a: %d \n", a);
+        // fprintf(MYFILEPR,"b: %d \n", b);
+        // fprintf(MYFILEPR,"c: %d \n", c); 
+    }
+}
 	
 
 
@@ -269,7 +345,7 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
 
     InputRealPtrsType pv_C = ssGetInputPortRealSignalPtrs(S,2);
 
-    InputRealPtrsType pidc = ssGetInputPortRealSignalPtrs(S,3);
+    // InputRealPtrsType pidc = ssGetInputPortRealSignalPtrs(S,3);
     
     real_T            *Sa1    = ssGetOutputPortRealSignal(S,0);
     
@@ -302,8 +378,8 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     
     
    
-   
-    float Jmin=INFINITY;
+    
+    Jmin=INFINITY;
     
     // Medidas
     
@@ -322,11 +398,11 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     v_C[2] = *pv_C[2];
     v_C[3] = *pv_C[3];
 
-    vd1 = v_C[0] - v_C[3];
-    vd2 = v_C[1] - v_C[2];
-    vd3 = v_C[2] - v_C[3];
+    vd[0] = v_C[0] - v_C[3];
+    vd[1] = v_C[1] - v_C[2];
+    vd[2] = v_C[2] - v_C[3];
 
-    idc = *pidc[0];
+    // idc = *pidc[0];
 	
 	// Transformadas
     
@@ -342,9 +418,15 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
     iref[1] = ampli*sin(50. * (2. * M_PI) * cont * Tsampling + 2.*M_PI/3.);
     iref[2] = ampli*sin(50. * (2. * M_PI) * cont * Tsampling + 4.*M_PI/3.);
 
+    iref2[0] = ampli*sin(50. * (2. * M_PI) * (cont + 1.) * Tsampling);
+    iref2[1] = ampli*sin(50. * (2. * M_PI) * (cont + 1.) * Tsampling + 2.*M_PI/3.);
+    iref2[2] = ampli*sin(50. * (2. * M_PI) * (cont + 1.) * Tsampling + 4.*M_PI/3.);
 
     iref_aB[0] = Tabc_aB[0][0]*iref[0]+Tabc_aB[0][1]*iref[1]+Tabc_aB[0][2]*iref[2];
     iref_aB[1] = Tabc_aB[1][0]*iref[0]+Tabc_aB[1][1]*iref[1]+Tabc_aB[1][2]*iref[2];
+
+    iref2_aB[0] = Tabc_aB[0][0]*iref2[0]+Tabc_aB[0][1]*iref2[1]+Tabc_aB[0][2]*iref2[2];
+    iref2_aB[1] = Tabc_aB[1][0]*iref2[0]+Tabc_aB[1][1]*iref2[1]+Tabc_aB[1][2]*iref2[2];
 	
 	// delta = (v_aB[0]*v_aB[0]+v_aB[1]*v_aB[1]);
     // if(delta == 0)
@@ -401,15 +483,17 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
 
     for(i=1;i<=125;i++)
     {
-        if((fabsf(Uk[(i-1)*3] - u[0]) <= 2) && (fabsf(Uk[(i-1)*3 + 1] - u[1]) <= 2) && (fabsf(Uk[(i-1)*3 + 2] - u[2]) <= 2))
+        if((fabsf(*(Uk+(i-1)*3) - u[0]) <= 2) && (fabsf(*(Uk+(i-1)*3 + 1) - u[1]) <= 2) && (fabsf(*(Uk+(i-1)*3 + 2) - u[2]) <= 2))
         {
+            u_act1 = *(Uk+(i-1)*3);
+            u_act2 = *(Uk+(i-1)*3 + 1);
+            u_act3 = *(Uk+(i-1)*3 + 2);
             // fprintf(MYFILEPR,"a-posible: %f \n", Uk[(i-1)*3]);
             // fprintf(MYFILEPR,"b-posible: %f \n", Uk[(i-1)*3 + 1]);
             // fprintf(MYFILEPR,"c-posible: %f \n", Uk[(i-1)*3 + 2]); 
             // fprintf(MYFILEPR,"\n"); 
-
-            iJ_aB[0] = (1./(R*Tsampling+L))*(L*i_aB[0]+Tsampling*vdc/6.*sqrt(3./2.)*(Tabc_aB[0][0]*Uk[(i-1)*3]+Tabc_aB[0][1]*Uk[(i-1)*3 + 1]+Tabc_aB[0][2]*Uk[(i-1)*3 + 2]));
-            iJ_aB[1] = (1./(R*Tsampling+L))*(L*i_aB[1]+Tsampling*vdc/6.*sqrt(3./2.)*(Tabc_aB[1][0]*Uk[(i-1)*3]+Tabc_aB[1][1]*Uk[(i-1)*3 + 1]+Tabc_aB[1][2]*Uk[(i-1)*3 + 2]));
+            iJ_aB[0] = (1./(R*Tsampling+L))*(L*i_aB[0]+Tsampling*vdc/6.*sqrt(3./2.)*(Tabc_aB[0][0]*(*(Uk+(i-1)*3))+Tabc_aB[0][1]*(*(Uk+(i-1)*3 + 1))+Tabc_aB[0][2]*(*(Uk+(i-1)*3 + 2))));
+            iJ_aB[1] = (1./(R*Tsampling+L))*(L*i_aB[1]+Tsampling*vdc/6.*sqrt(3./2.)*(Tabc_aB[1][0]*(*(Uk+(i-1)*3))+Tabc_aB[1][1]*(*(Uk+(i-1)*3 + 1))+Tabc_aB[1][2]*(*(Uk+(i-1)*3 + 2))));
 			
             // ERROR REFERENCIA
 
@@ -418,9 +502,9 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
 
             // COSTE DISPAROS
 
-            incr_u=fabsf(Uk[(i-1)*3] - u[0])+
-                   fabsf(Uk[(i-1)*3 + 1] - u[1])+
-                   fabsf(Uk[(i-1)*3 + 2] - u[2]);
+            incr_u=fabsf(*(Uk+(i-1)*3) - u[0])+
+                   fabsf(*(Uk+(i-1)*3 + 1) - u[1])+
+                   fabsf(*(Uk+(i-1)*3 + 2) - u[2]);
 
             // DESBALANCEO CONDENSADORES
 
@@ -447,45 +531,21 @@ static void mdlOutputs(SimStruct *S, int_T tid) //genera una salida cada vez q s
             fc4xic = *(fc + 2)*iJ_abc[2];
             fc5xic = *(fc + 3)*iJ_abc[2];
 
-            C1 = - fa1xia - fb1xib - fc1xic;
-            C2 = - fa1xia - fb1xib - fc1xic - fa2xia - fb2xib - fc2xic;
-            C3 = fa4xia + fb4xib + fc4xic + fa5xia + fb5xib + fc5xic;
-            C4 = fa5xia + fb5xib + fc5xic;
+            Kirchhoff[0] = - fa1xia - fb1xib - fc1xic;
+            Kirchhoff[1] = - fa1xia - fb1xib - fc1xic - fa2xia - fb2xib - fc2xic;
+            Kirchhoff[2] = fa4xia + fb4xib + fc4xic + fa5xia + fb5xib + fc5xic;
+            Kirchhoff[3] = fa5xia + fb5xib + fc5xic;
 
-            // vd1 = v_C[0] - v_C[3] + (Tsampling/C)*(C1 - C4);
-            // vd2 = v_C[1] - v_C[2] + (Tsampling/C)*(C2 - C3);
-            // vd3 = v_C[2] - v_C[3] + (Tsampling/C)*(C3 - C4);
+            cost = ie[0]*ie[0]+ie[1]*ie[1] + lambda*incr_u + lambdaDC*(vd[0]*(Kirchhoff[0] - Kirchhoff[3])+vd[1]*(Kirchhoff[1] - Kirchhoff[2])+vd[2]*(Kirchhoff[2] - Kirchhoff[3]));
 
-            // vd1 = 700./4. - v_C[0] - (Tsampling/C)*(C1 + idc);
-            // vd2 = 700./4. - v_C[1] - (Tsampling/C)*(C2 + idc);
-            // vd3 = 700./4. - v_C[2] - (Tsampling/C)*(C3 + idc);
-            // vd4 = 700./4. - v_C[3] - (Tsampling/C)*(C4 + idc);
-
-            
-
-            // vd1 = fabsf(vd1);
-            // vd2 = fabsf(vd2);
-            // vd3 = fabsf(vd3);
-            // vd4 = fabsf(vd4);
-
-            // fprintf(MYFILEPR,"vd1: %f \n", vd1);
-            // fprintf(MYFILEPR,"vd2: %f \n", vd2);
-            // fprintf(MYFILEPR,"vd3: %f \n", vd3); 
-
-            J=ie[0]*ie[0]+ie[1]*ie[1] + lambda*incr_u + lambdaDC*(vd1*(C1 - C4)+vd2*(C2 - C3)+vd3*(C3 - C4));//+vd4);
-
-            if(J<Jmin)
+            if(cost < Jmin)
             {
-                Jmin = J;
-                a = Uk[(i-1)*3];
-                b = Uk[(i-1)*3 + 1];
-                c = Uk[(i-1)*3 + 2];
-
-                // fprintf(MYFILEPR,"cost: %f \n", Jmin);
-                // fprintf(MYFILEPR,"a: %d \n", a);
-                // fprintf(MYFILEPR,"b: %d \n", b);
-                // fprintf(MYFILEPR,"c: %d \n", c); 
-            }
+                for(k=1;k<=125;k++)
+                {
+                    if((fabsf(*(Uk+(k-1)*3) - u_act1) <= 2) && (fabsf(*(Uk+(k-1)*3 + 1) - u_act2) <= 2) && (fabsf(*(Uk+(k-1)*3 + 2) - u_act3) <= 2))
+                        MPC_N2(*(Uk+(k-1)*3),*(Uk+(k-1)*3 + 1),*(Uk+(k-1)*3 + 2),Kirchhoff,vd);
+                }
+            }        
         }
     }
     

@@ -197,7 +197,7 @@ static void mdlStart(SimStruct *S)
     c = -1.;
     
     lambda = 1e-2;
-    lambdaDC = .75;
+    lambdaDC = 1.;
 
     cont = 0;
     perm();
